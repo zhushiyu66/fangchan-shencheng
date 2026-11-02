@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#245fc7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>房产信息样本生成器｜iPhone版</title>
+<style>
+:root{--blue:#2168e8;--ink:#1e2b42;--muted:#63718a;--line:#d6dfec}
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6fb;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;-webkit-text-size-adjust:100%}
+header{padding:22px 16px 18px;color:#fff;background:linear-gradient(135deg,#4e8df8,#2057c7);border-radius:0 0 20px 20px}
+header h1{font-size:21px;margin:0 0 7px}header p{font-size:13px;line-height:1.55;margin:0}
+main{max-width:900px;margin:auto;padding:12px 12px 32px}
+.card{background:#fff;border:1px solid #e6ebf4;border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 5px 16px #19345c0c}
+h2{font-size:17px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.field.full{grid-column:1/-1}
+label{display:block;font-size:13px;font-weight:650;margin:7px 0 5px}
+input,select,textarea,button{font:inherit}
+input,select,textarea{width:100%;min-height:44px;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:16px}
+textarea{min-height:86px;resize:vertical}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+button{border:0;border-radius:11px;padding:12px 13px;font-weight:650;min-height:44px;cursor:pointer}
+.actions button{flex:1;min-width:130px}
+.primary{background:var(--blue);color:#fff}.secondary{background:#eaf1ff;color:#1d5bc7}
+.hint{font-size:12px;line-height:1.6;color:var(--muted)}
+.warning{background:#fff5d8;border:1px solid #f1d98c;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.6;color:#76530c;margin-top:10px}
+.preview{background:#e8edf5;padding:6px;border-radius:12px;overflow:hidden}
+canvas{width:100%;height:auto;display:block;background:#f8f5ed;border-radius:5px}
+#status{margin-top:8px;font-size:13px;color:#2457a6;line-height:1.5}
+@media(max-width:540px){.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.card{padding:12px}header{padding-top:20px}}
+</style>
+</head>
+<body>
+<header>
+<h1>房产信息样本生成器</h1>
+<p>iPhone Safari 适配版 · 编辑字段 · 实时预览 · 导出 PNG<br>所有输出均明确标注为样本，不是官方产权证明。</p>
+</header>
+<main>
+<section class="card">
+<h2>① 编辑样本信息</h2>
+<div class="grid">
+<div class="field"><label for="owner">权利人（样本）</label><input id="owner" value="张三（模拟姓名）" maxlength="50"></div>
+<div class="field"><label for="cert">样本编号</label><input id="cert" value="SAMPLE-000001" maxlength="80"></div>
+<div class="field full"><label for="location">坐落（示例）</label><input id="location" value="示例区示例路 1 幢 2 单元 101 室" maxlength="120"></div>
+<div class="field"><label for="share">共有情况</label><input id="share" value="示例：单独所有" maxlength="80"></div>
+<div class="field"><label for="unit">不动产单元号</label><input id="unit" value="SAMPLE-0000-0000" maxlength="100"></div>
+<div class="field full"><label for="type">权利类型</label><input id="type" value="样本权利类型（非官方记录）" maxlength="120"></div>
+<div class="field"><label for="nature">权利性质</label><input id="nature" value="示例性质" maxlength="100"></div>
+<div class="field"><label for="purpose">用途</label><select id="purpose"><option>住宅（示例）</option><option>商业（示例）</option><option>办公（示例）</option><option>其他（示例）</option></select></div>
+<div class="field"><label for="landArea">土地使用权面积</label><input id="landArea" value="8.2 m²（示例）" maxlength="50"></div>
+<div class="field"><label for="buildingArea">房屋建筑面积</label><input id="buildingArea" value="180.5 m²（示例）" maxlength="50"></div>
+<div class="field full"><label for="term">使用期限</label><input id="term" value="示例期限（请勿作为产权证明）" maxlength="100"></div>
+<div class="field full"><label for="other">权利其他状况</label><textarea id="other" maxlength="500">此区域用于内部样本说明。所有内容均为示例信息，不代表真实登记结果。</textarea></div>
+<div class="field"><label for="fontSize">字体大小</label><select id="fontSize"><option value="16">较小</option><option value="18" selected>标准</option><option value="22">较大</option><option value="26">特大</option></select></div>
+<div class="field"><label for="fontColor">字体颜色</label><select id="fontColor"><option value="#292929">深灰</option><option value="#111111">黑色</option><option value="#665846">棕灰</option><option value="#244d84">蓝色</option></select></div>
+</div>
+<div class="actions"><button class="secondary" id="reset" type="button">恢复示例内容</button><button class="primary" id="refresh" type="button">更新预览</button></div>
+</section>
+<section class="card">
+<h2>② 图片预览</h2>
+<div class="preview"><canvas id="cv" width="1200" height="1600" aria-label="房产信息样本图片预览"></canvas></div>
+<p class="hint">预览会随编辑自动更新。导出图片会保留样本水印及免责声明。</p>
+<div class="actions"><button class="primary" id="export" type="button">导出 / 分享 PNG</button></div>
+<div id="status" role="status" aria-live="polite">准备就绪。修改上方字段即可更新预览。</div>
+<div class="warning">仅供内部样本排版、演示或测试使用。图片持续显示“样本｜非正式证件”水印，不得用于冒充真实产权证明或误导他人。</div>
+</section>
+</main>
+<script>
+(()=>{
+const $=id=>document.getElementById(id),c=$('cv'),x=c.getContext('2d'),status=$('status');
+const ids=['owner','cert','location','share','unit','type','nature','purpose','landArea','buildingArea','term','other','fontSize','fontColor'];
+const defaults={owner:'张三（模拟姓名）',cert:'SAMPLE-000001',location:'示例区示例路 1 幢 2 单元 101 室',share:'示例：单独所有',unit:'SAMPLE-0000-0000',type:'样本权利类型（非官方记录）',nature:'示例性质',purpose:'住宅（示例）',landArea:'8.2 m²（示例）',buildingArea:'180.5 m²（示例）',term:'示例期限（请勿作为产权证明）',other:'此区域用于内部样本说明。所有内容均为示例信息，不代表真实登记结果。',fontSize:'18',fontColor:'#292929'};
+const v=id=>$(id).value.trim();
+function wrapText(text,maxWidth,font){x.font=font;let lines=[],line='';for(const ch of String(text||'')){if(x.measureText(line+ch).width>maxWidth&&line){lines.push(line);line=ch}else line+=ch}if(line)lines.push(line);return lines}
+function draw(){
+ const W=c.width,H=c.height;x.clearRect(0,0,W,H);x.fillStyle='#f8f4e9';x.fillRect(0,0,W,H);
+ x.fillStyle='#fbf8f0';x.fillRect(28,28,W-56,H-56);
+ x.strokeStyle='#c8b38f';x.lineWidth=3;x.strokeRect(40,40,W-80,H-80);
+ x.strokeStyle='#e0d1b5';x.lineWidth=1.5;x.strokeRect(52,52,W-104,H-104);
+ x.fillStyle='#715c3e';x.textAlign='center';x.font='bold 31px sans-serif';x.fillText('房产信息登记样本',W/2,105);
+ x.font='bold 24px sans-serif';x.fillStyle='#a3262c';x.fillText('样本｜非正式证件',W/2,145);
+ x.textAlign='left';x.fillStyle='#444';x.font='18px sans-serif';x.fillText('样本资料编号：'+v('cert'),92,190);
+ const rows=[['权利人',v('owner')],['共有情况',v('share')],['坐落',v('location')],['不动产单元号',v('unit')],['权利类型',v('type')],['权利性质',v('nature')],['用途',v('purpose')],['面积','土地使用权面积 '+v('landArea')+' / 房屋建筑面积 '+v('buildingArea')],['使用期限',v('term')],['权利其他状况',v('other')]];
+ const top=220,left=86,totalW=W-172,labelW=175,rowHeights=[72,72,100,86,94,76,70,90,82,250];
+ let y=top;const fs=Math.max(12,Math.min(32,Number(v('fontSize'))||18)),color=v('fontColor');
+ rows.forEach((r,i)=>{const rh=rowHeights[i];x.fillStyle=i%2?'#f6f1e7':'#fbf8f0';x.fillRect(left,y,totalW,rh);x.strokeStyle='#9e9a8e';x.lineWidth=1.4;x.strokeRect(left,y,totalW,rh);x.beginPath();x.moveTo(left+labelW,y);x.lineTo(left+labelW,y+rh);x.stroke();x.fillStyle='#4c463d';x.textAlign='center';x.font=`${fs}px sans-serif`;const labelLines=wrapText(r[0],labelW-18,`${fs}px sans-serif`);let ly=y+rh/2-(labelLines.length-1)*fs*.6;labelLines.forEach((t,j)=>x.fillText(t,left+labelW/2,ly+j*fs*1.2));x.textAlign='left';x.fillStyle=color;x.font=`${fs}px sans-serif`;const max=totalW-labelW-24,lines=wrapText(r[1]||'（未填写）',max,`${fs}px sans-serif`);let ty=y+Math.max(28,(rh-lines.length*fs*1.3)/2+fs);lines.slice(0,Math.max(1,Math.floor((rh-12)/(fs*1.3)))).forEach((t,j)=>x.fillText(t,left+labelW+12,ty+j*fs*1.3));y+=rh});
+ x.save();x.globalAlpha=.18;x.translate(W/2,H/2);x.rotate(-.35);x.fillStyle='#b3212a';x.textAlign='center';x.font='bold 82px sans-serif';x.fillText('样本 · 非正式证件',0,0);x.restore();
+ x.fillStyle='#a3262c';x.fillRect(40,H-102,W-80,48);x.fillStyle='#fff';x.textAlign='center';x.font='bold 23px sans-serif';x.fillText('仅供内部样本排版｜不构成产权证明',W/2,H-71);
+ x.fillStyle='#675b4b';x.font='16px sans-serif';x.fillText('本图为用户编辑的示例信息，不代表官方登记数据',W/2,H-34);
+}
+ids.forEach(id=>$(id).addEventListener('input',draw));
+$('refresh').addEventListener('click',()=>{draw();status.textContent='预览已更新。'});
+$('reset').addEventListener('click',()=>{Object.entries(defaults).forEach(([k,val])=>$(k).value=val);draw();status.textContent='已恢复为示例内容。'});
+$('export').addEventListener('click',()=>{
+ draw();
+ c.toBlob(async blob=>{
+  if(!blob){status.textContent='导出失败，请刷新页面后重试。';return}
+  const file=new File([blob],'房产信息样本.png',{type:'image/png'});
+  try{
+   if(navigator.canShare && navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'房产信息样本',text:'样本图片，仅供内部排版演示。'});status.textContent='已打开系统分享菜单，可选择存储图片。';return}
+  }catch(e){if(e.name==='AbortError'){status.textContent='已取消分享。';return}}
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='房产信息样本.png';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);status.textContent='已尝试导出 PNG；若 Safari 未自动保存，请检查下载项或分享菜单。';
+ },'image/png');
+});
+draw();
+})();
+</script>
+</body>
+</html>
