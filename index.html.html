@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#1f2937">
+<title>原图脱敏与样本标注工具</title>
+<style>
+:root{--blue:#2563eb;--ink:#172033;--muted:#64748b;--line:#dbe2ea;--bg:#f3f6fb}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+header{background:#1f2937;color:#fff;padding:18px 16px}
+header h1{font-size:20px;margin:0 0 6px}
+header p{font-size:13px;line-height:1.55;margin:0;color:#d1d5db}
+main{max-width:980px;margin:auto;padding:12px;display:grid;gap:12px}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;box-shadow:0 2px 8px #0f172a0a}
+h2{font-size:16px;margin:0 0 10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,.filebtn{border:0;border-radius:10px;padding:11px 13px;background:var(--blue);color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;min-height:42px}
+button.secondary,.filebtn.secondary{background:#e8eef7;color:#1e293b}
+button.danger{background:#b91c1c}
+button:disabled{opacity:.45}
+input[type=file]{display:none}
+input[type=range]{width:100%}
+label{font-size:13px;color:#475569}
+.hint{font-size:13px;color:#64748b;line-height:1.6;margin:8px 0 0}
+#stage{width:100%;min-height:170px;background:#e9eef5;border:1px dashed #b7c3d4;border-radius:10px;overflow:hidden;position:relative;touch-action:pan-y}
+canvas{display:block;width:100%;height:auto;touch-action:pan-y}
+#empty{padding:35px 14px;text-align:center;color:#64748b;font-size:14px}
+.pill{display:inline-block;background:#fff1f2;color:#9f1239;border:1px solid #fecdd3;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:700}
+.control{display:grid;gap:6px;min-width:130px;flex:1}
+textarea{width:100%;min-height:72px;border:1px solid #cbd5e1;border-radius:10px;padding:10px;font:14px inherit}
+input[type=text]{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px;font:14px inherit}
+footer{text-align:center;color:#64748b;font-size:12px;padding:4px 12px 24px}
+</style>
+</head>
+<body>
+<header>
+  <h1>原图脱敏与样本标注工具</h1>
+  <p>保留原始照片的背景、光线和纸张纹理。适合遮盖个人信息、制作脱敏副本和添加样本标记；不用于改写或仿制正式产权登记内容。</p>
+</header>
+<main>
+  <section class="card">
+    <h2>① 导入原始照片</h2>
+    <div class="row">
+      <label class="filebtn" for="file">选择照片</label><input id="file" type="file" accept="image/*">
+      <button class="secondary" id="reset" disabled>恢复原图</button>
+      <span class="pill">导出自动带样本标识</span>
+    </div>
+    <p class="hint">照片只在当前浏览器页面内处理，不会上传到服务器。请尽量使用自己有权处理的照片。</p>
+  </section>
+  <section class="card">
+    <h2>② 框选需要脱敏的区域</h2>
+    <div class="row">
+      <button id="redact" disabled>遮盖选中区域</button>
+      <button id="undo" class="secondary" disabled>撤销上一步</button>
+      <button id="clearSel" class="secondary" disabled>清除选框</button>
+    </div>
+    <p class="hint">在照片上用手指或鼠标拖动框选文字区域，再点“遮盖选中区域”。工具会用不透明遮盖并标注“已脱敏”，不会伪造新的登记文字。</p>
+    <div id="stage" style="margin-top:10px"><div id="empty">请先选择一张照片</div><canvas id="canvas" hidden></canvas></div>
+  </section>
+  <section class="card">
+    <h2>③ 添加样本说明</h2>
+    <div class="control">
+      <label for="note">说明文字（会显示在图片底部）</label>
+      <input id="note" type="text" maxlength="70" value="仅供演示｜非正式文件">
+    </div>
+    <div class="control" style="margin-top:12px">
+      <label for="opacity">样本水印透明度：<span id="opacityVal">28%</span></label>
+      <input id="opacity" type="range" min="10" max="65" value="28">
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="export" disabled>导出 PNG</button>
+      <button id="share" class="secondary" disabled>分享图片</button>
+    </div>
+    <p class="hint">导出图片会带有醒目的“样本／非正式文件”水印。未选中区域尽量保持原样；遮盖操作不可恢复原始像素，撤销可回退最近一步。</p>
+  </section>
+</main>
+<footer>建议只分享脱敏副本。正式产权信息请以不动产登记机构出具或查询的记录为准。</footer>
+<script>
+const fileInput=document.getElementById('file'), canvas=document.getElementById('canvas'), ctx=canvas.getContext('2d');
+const empty=document.getElementById('empty'), resetBtn=document.getElementById('reset'), redactBtn=document.getElementById('redact'), undoBtn=document.getElementById('undo'), clearBtn=document.getElementById('clearSel'), exportBtn=document.getElementById('export'), shareBtn=document.getElementById('share');
+const note=document.getElementById('note'), opacity=document.getElementById('opacity'), opacityVal=document.getElementById('opacityVal');
+let img=new Image(), loaded=false, original=null, history=[], selection=null, dragging=false, start=null, displayScale=1;
+function drawBase(){if(!loaded)return;canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;ctx.drawImage(img,0,0);original=ctx.getImageData(0,0,canvas.width,canvas.height);history=[];selection=null;render();}
+function render(){
+ if(!loaded)return;
+ ctx.putImageData(original,0,0);
+ // persistent redaction marks are part of the current pixel layer, so render from saved working image
+ if(working){ctx.putImageData(working,0,0);}
+ drawWatermark(ctx,canvas.width,canvas.height,false);
+ if(selection){ctx.save();ctx.strokeStyle='#2563eb';ctx.lineWidth=Math.max(3,canvas.width/350);ctx.setLineDash([10,7]);ctx.strokeRect(selection.x,selection.y,selection.w,selection.h);ctx.fillStyle='rgba(37,99,235,.13)';ctx.fillRect(selection.x,selection.y,selection.w,selection.h);ctx.restore();}
+}
+let working=null;
+function drawWatermark(c,w,h,exporting){
+ const alpha=Number(opacity.value)/100;
+ c.save();
+ c.globalAlpha=alpha;c.fillStyle='#b91c1c';c.translate(w*.5,h*.5);c.rotate(-Math.PI/7);
+ c.textAlign='center';c.textBaseline='middle';c.font=`bold ${Math.max(22,w*.055)}px sans-serif`;
+ const word='样本 · 非正式文件';const step=Math.max(120,w*.38);
+ for(let y=-h;y<h*1.2;y+=Math.max(110,h*.16)){for(let x=-w;x<w*1.2;x+=step)c.fillText(word,x,y);}
+ c.restore();
+ c.save();c.globalAlpha=1;c.fillStyle='rgba(127,29,29,.92)';const bh=Math.max(38,h*.055);c.fillRect(0,h-bh,w,bh);
+ c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.font=`bold ${Math.max(15,w*.027)}px sans-serif`;c.fillText((note.value||'仅供演示｜非正式文件').slice(0,70),w/2,h-bh/2);
+ c.restore();
+}
+function saveWorking(){if(working)history.push(new ImageData(new Uint8ClampedArray(working.data),working.width,working.height));else if(original)history.push(new ImageData(new Uint8ClampedArray(original.data),original.width,original.height));}
+fileInput.addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const url=URL.createObjectURL(f);img.onload=()=>{loaded=true;canvas.hidden=false;empty.hidden=true;working=null;drawBase();[resetBtn,redactBtn,clearBtn,exportBtn,shareBtn].forEach(b=>b.disabled=false);undoBtn.disabled=true;URL.revokeObjectURL(url);};img.src=url;});
+resetBtn.addEventListener('click',()=>{if(!loaded)return;working=null;history=[];selection=null;render();undoBtn.disabled=true;});
+function getPos(e){const r=canvas.getBoundingClientRect();return {x:Math.max(0,Math.min(canvas.width,(e.clientX-r.left)*canvas.width/r.width)),y:Math.max(0,Math.min(canvas.height,(e.clientY-r.top)*canvas.height/r.height))};}
+canvas.addEventListener('pointerdown',e=>{if(!loaded)return;dragging=true;start=getPos(e);selection={x:start.x,y:start.y,w:0,h:0};canvas.setPointerCapture(e.pointerId);render();});
+canvas.addEventListener('pointermove',e=>{if(!dragging||!start)return;const p=getPos(e);selection={x:Math.min(start.x,p.x),y:Math.min(start.y,p.y),w:Math.abs(p.x-start.x),h:Math.abs(p.y-start.y)};render();});
+canvas.addEventListener('pointerup',()=>{dragging=false;start=null;if(selection&&(selection.w<8||selection.h<8))selection=null;render();});
+redactBtn.addEventListener('click',()=>{if(!loaded||!selection||selection.w<5||selection.h<5){alert('请先在照片上拖动框选一个区域。');return;}saveWorking();if(!working)working=new ImageData(new Uint8ClampedArray(original.data),original.width,original.height);const x=Math.round(selection.x),y=Math.round(selection.y),w=Math.round(selection.w),h=Math.round(selection.h);ctx.putImageData(working,0,0);ctx.fillStyle='#e5e7eb';ctx.fillRect(x,y,w,h);ctx.strokeStyle='#9ca3af';ctx.lineWidth=Math.max(2,canvas.width/600);ctx.strokeRect(x,y,w,h);ctx.fillStyle='#374151';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`bold ${Math.max(16,Math.min(w*.11,h*.35,canvas.width*.035))}px sans-serif`;ctx.fillText('已脱敏',x+w/2,y+h/2,Math.max(10,w-8));working=ctx.getImageData(0,0,canvas.width,canvas.height);selection=null;render();undoBtn.disabled=history.length===0;});
+undoBtn.addEventListener('click',()=>{if(!history.length)return;working=history.pop();selection=null;render();undoBtn.disabled=history.length===0;});
+clearBtn.addEventListener('click',()=>{selection=null;render();});
+opacity.addEventListener('input',()=>{opacityVal.textContent=opacity.value+'%';render();});
+note.addEventListener('input',render);
+function outputCanvas(){const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const c=out.getContext('2d');if(working)c.putImageData(working,0,0);else c.putImageData(original,0,0);drawWatermark(c,out.width,out.height,true);return out;}
+exportBtn.addEventListener('click',()=>{if(!loaded)return;const out=outputCanvas();out.toBlob(blob=>{if(!blob){alert('导出失败，请重试。');return;}const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='脱敏样本.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);},'image/png');});
+shareBtn.addEventListener('click',async()=>{if(!loaded)return;const out=outputCanvas();out.toBlob(async blob=>{if(!blob)return;const f=new File([blob],'脱敏样本.png',{type:'image/png'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'脱敏样本'});}catch(e){}}else{alert('当前浏览器不支持直接分享，请先点击“导出 PNG”，再从“文件”或“照片”中分享。');}},'image/png');});
+</script>
+</body>
+</html>
